@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live: Water Temperatures and Observations</title>
+<style>
+  :root {
+    --blue-50: #E6F1FB;
+    --blue-200: #85B7EB;
+    --blue-600: #185FA5;
+    --blue-800: #0C447C;
+    --teal-50: #E1F5EE;
+    --teal-600: #0F6E56;
+    --gray-50: #F1EFE8;
+    --gray-600: #5F5E5A;
+    --text: #1a1a18;
+    --text-muted: #5F5E5A;
+    --border: rgba(0,0,0,0.08);
+    --bg: #f4f8fc;
+    --card: #ffffff;
+    --radius: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --text: #e8e6e0;
+      --text-muted: #9a9890;
+      --border: rgba(255,255,255,0.08);
+      --bg: #14181f;
+      --card: #1e2430;
+      --gray-50: #1e2430;
+      --blue-50: #0c1a2e;
+      --teal-50: #061a12;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+  header {
+    background: linear-gradient(135deg, #042C53 0%, #185FA5 60%, #0F6E56 100%);
+    color: #fff;
+    padding: 2.5rem 1.5rem 2rem;
+    text-align: center;
+  }
+  header h1 { font-size: clamp(1.4rem, 4vw, 2.2rem); font-weight: 700; letter-spacing: -0.02em; margin-bottom: 0.4rem; }
+  header p { font-size: 0.95rem; opacity: 0.82; }
+  .wave { display: block; width: 100%; height: 32px; background: var(--bg); clip-path: ellipse(55% 100% at 50% 100%); margin-top: -1px; }
+  main { max-width: 960px; margin: 0 auto; padding: 1rem 1.25rem 3rem; }
+  .updated {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 0.8rem; color: var(--teal-600); background: var(--teal-50);
+    border: 1px solid #9FE1CB; border-radius: 20px; padding: 3px 12px; margin-bottom: 1.25rem;
+  }
+  .updated::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--teal-600); display: inline-block; }
+  .section-title {
+    font-size: 1.1rem; font-weight: 600; color: var(--blue-800);
+    margin: 2rem 0 0.75rem; padding-bottom: 0.4rem;
+    border-bottom: 2px solid var(--blue-200);
+    display: flex; align-items: center; gap: 8px;
+  }
+  @media (prefers-color-scheme: dark) { .section-title { color: var(--blue-200); } }
+
+  /* Search / filter bar */
+  .filter-bar { display: flex; gap: 8px; margin-bottom: 0.75rem; flex-wrap: wrap; }
+  .filter-bar input {
+    flex: 1; min-width: 160px; padding: 7px 12px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--card); color: var(--text);
+    font-size: 0.88rem; outline: none;
+  }
+  .filter-bar input:focus { border-color: var(--blue-600); }
+  .filter-count { font-size: 0.8rem; color: var(--text-muted); align-self: center; white-space: nowrap; }
+
+  /* Table */
+  .table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); background: var(--card); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  thead tr { background: var(--blue-50); }
+  th {
+    text-align: left; padding: 10px 14px; font-weight: 600;
+    font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--blue-800); border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  @media (prefers-color-scheme: dark) { th { color: var(--blue-200); } }
+  td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--gray-50); }
+  tr.hidden { display: none; }
+
+  .location-name { font-weight: 500; }
+  .location-note { font-size: 0.76rem; color: var(--text-muted); margin-top: 1px; }
+
+  .temp-badge {
+    display: inline-block; font-size: 1rem; font-weight: 700;
+    padding: 2px 10px; border-radius: 8px; white-space: nowrap;
+  }
+  .temp-warm { background: #FFF3CD; color: #7D5A00; }
+  .temp-cool { background: var(--blue-50); color: var(--blue-800); }
+  .temp-cold { background: #E8EFF8; color: #1a3a5c; }
+  .temp-na   { background: var(--gray-50); color: var(--gray-600); font-size: 0.82rem; }
+
+  /* Legend */
+  .legend { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 0.6rem; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.76rem; color: var(--text-muted); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+
+  /* Edit hint */
+  .edit-hint {
+    background: var(--blue-50); border: 1px solid var(--blue-200);
+    border-radius: var(--radius); padding: 0.85rem 1rem;
+    font-size: 0.81rem; color: var(--blue-800); margin-top: 0.75rem;
+    display: flex; gap: 10px; align-items: flex-start;
+  }
+  @media (prefers-color-scheme: dark) { .edit-hint { color: var(--blue-200); } }
+  .edit-hint code { background: rgba(0,0,0,0.07); padding: 1px 5px; border-radius: 4px; font-size: 0.78rem; }
+
+  /* Photo grid */
+  .photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 0.75rem; }
+  .photo-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .photo-card img { width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block; }
+  .photo-placeholder {
+    width: 100%; aspect-ratio: 4/3; background: var(--blue-50);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: var(--blue-800); font-size: 0.76rem; gap: 6px; text-align: center; padding: 1rem;
+  }
+  .photo-placeholder svg { width: 28px; height: 28px; opacity: 0.35; }
+  .photo-caption { padding: 7px 10px; font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
+
+  footer { text-align: center; padding: 1.5rem; font-size: 0.78rem; color: var(--text-muted); border-top: 1px solid var(--border); }
+
+  @media (max-width: 600px) { th:nth-child(3), td:nth-child(3) { display: none; } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🌊 Live: Water Temperatures and Observations</h1>
+  <p>Latest measurements from local swimming spots</p>
+</header>
+<span class="wave"></span>
+
+<main>
+
+  <!-- ════════════════════════════════════════════════════════
+       STEP 1 TO UPDATE: Change the date and time below
+       ════════════════════════════════════════════════════════ -->
+  <div class="updated">Updated: 28 Jun 2025 · 08:30</div>
+
+  <div class="section-title">🌡️ Current water temperatures</div>
+
+  <div class="filter-bar">
+    <input type="text" id="search" placeholder="Search by location name…" oninput="filterTable()" />
+    <span class="filter-count" id="count"></span>
+  </div>
+
+  <div class="table-wrap">
+    <table id="temp-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Location</th>
+          <th>Measured</th>
+          <th>Temp</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+
+        <!-- ════════════════════════════════════════════════════════
+             HOW TO ADD / EDIT A ROW:
+             Copy any <tr> block below and paste it above the last row.
+             Edit:
+               - location-name: the name of the swimming spot
+               - location-note: optional subtitle (area, lake, sea, etc.)
+               - temp-badge class: temp-warm (>22°C) | temp-cool (16–22°C) | temp-cold (<16°C) | temp-na (not measured)
+               - temperature number and unit
+               - date/time measured
+               - notes (or — for nothing)
+             ════════════════════════════════════════════════════════ -->
+
+        <tr>
+          <td style="color:var(--text-muted);font-size:0.8rem">1</td>
+          <td><div class="location-name">Swimming Spot 1</div><div class="location-note">e.g. Aurinkolahti, Helsinki</div></td>
+          <td style="font-size:0.82rem;color:var(--text-muted);white-space:nowrap">28 Jun · 08:15</td>
+          <td><span class="temp-badge temp-warm">22.4 °C</span></td>
+          <td style="font-size:0.85rem;color:var(--text-muted)">Clear water</td>
+        </tr>
+
+        <tr>
+          <td style="color:var(--text-muted);font-size:0.8rem">2</td>
+          <td><div class="location-name">Swimming Spot 2</div><div class="location-note">e.g. Hietaranta, Helsinki</div></td>
+          <td style="font-size:0.82rem;color:var(--text-muted);white-space:nowrap">28 Jun · 08:30</td>
+          <td><span class="temp-badge temp-cool">19.1 °C</span></td>
+          <td style="font-size:0.85rem;color:var(--text-muted)">—</td>
+        </tr>
+
+        <tr>
+          <td style="color:var(--text-muted);font-size:0.8rem">3</td>
+          <td><div class="location-name">Swimming Spot 3</div><div class="location-note">e.g. Pihlajasaari, Helsinki</div></td>
+          <td style="font-size:0.82rem;color:var(--text-muted);white-space:nowrap">28 Jun · 07:45</td>
+          <td><span class="temp-badge temp-cool">20.8 °C</span></td>
+          <td style="font-size:0.85rem;color:var(--text-muted)">Slight waves</td>
+        </tr>
+
+        <tr>
+          <td style="color:var(--text-muted);font-size:0.8rem">4</td>
+          <td><div class="location-name">Swimming Spot 4</div><div class="location-note">e.g. Uimastadion, Helsinki</div></td>
+          <td style="font-size:0.82rem;color:var(--text-muted);white-space:nowrap">27 Jun · 17:00</td>
+          <td><span class="temp-badge temp-cold">14.5 °C</span></td>
+          <td style="font-size:0.85rem;color:var(--text-muted)">Cold current</td>
+        </tr>
+
+        <tr>
+          <td style="color:var(--text-muted);font-size:0.8rem">5</td>
+          <td><div class="location-name">Swimming Spot 5</div><div class="location-note">e.g. Mustikkamaa, Helsinki</div></td>
+          <td style="font-size:0.82rem;color:var(--text-muted);white-space:nowrap">28 Jun · 09:00</td>
+          <td><span class="temp-badge temp-warm">23.0 °C</span></td>
+          <td style="font-size:0.85rem;color:var(--text-muted)">Shallow area</td>
+        </tr>
+
+        <tr>
+          <td style="color:var(--text-muted);font-size:0.8rem">6</td>
+          <td><div class="location-name">Swimming Spot 6</div><div class="location-note">e.g. Seurasaari, Helsinki</div></td>
+          <td style="font-size:0.82rem;color:var(--text-muted);white-space:nowrap">—</td>
+          <td><span class="temp-badge temp-na">Not measured</span></td>
+          <td style="font-size:0.85rem;color:var(--text-muted)">—</td>
+        </tr>
+
+        <tr>
+          <td style="color:var(--text-muted);font-size:0.8rem">7</td>
+          <td><div class="location-name">Swimming Spot 7</div><div class="location-note">e.g. Lauttasaari, Helsinki</div></td>
+          <td style="font-size:0.82rem;color:var(--text-muted);white-space:nowrap">28 Jun · 08:00</td>
+          <td><span class="temp-badge temp-cool">18.3 °C</span></td>
+          <td style="font-size:0.85rem;color:var(--text-muted)">—</td>
+        </tr>
+
+        <!-- PASTE NEW ROWS HERE — copy a <tr> block above and edit it -->
+
+      </tbody>
+    </table>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#FFF3CD;border:1px solid #c8a000"></div> Warm (&gt;22 °C)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#E6F1FB;border:1px solid #85B7EB"></div> Cool (16–22 °C)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#E8EFF8;border:1px solid #aabbcc"></div> Cold (&lt;16 °C)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#F1EFE8;border:1px solid #ccc"></div> Not measured</div>
+  </div>
+
+  <div class="edit-hint">
+    <span>✏️</span>
+    <span>
+      <strong>How to update temperatures:</strong> Open <code>index.html</code> in any text editor (Notepad on Windows, TextEdit on Mac).
+      Find the row you want to update — search for the location name. Change the number inside the temperature badge and update the date.
+      Change the badge class to <code>temp-warm</code>, <code>temp-cool</code>, <code>temp-cold</code>, or <code>temp-na</code> to match.
+      To add a new spot, copy any <code>&lt;tr&gt;...&lt;/tr&gt;</code> block and paste it before the comment <em>"PASTE NEW ROWS HERE"</em>.
+      Save the file and upload it to GitHub — the site updates immediately.
+    </span>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════════
+       PHOTOS SECTION
+       To add a photo: save the image file (e.g. photo1.jpg) in the
+       same folder as index.html. Then replace a placeholder block with:
+         <div class="photo-card">
+           <img src="photo1.jpg" alt="Swimming Spot 1">
+           <div class="photo-caption">Swimming Spot 1 · Aurinkolahti</div>
+         </div>
+       Upload both index.html AND the image file to GitHub.
+       ════════════════════════════════════════════════════════ -->
+  <div class="section-title">📸 Photos from the spots</div>
+
+  <div class="photo-grid">
+
+    <div class="photo-card">
+      <div class="photo-placeholder">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+        <span>Replace with:<br><code>photo1.jpg</code></span>
+      </div>
+      <div class="photo-caption">Swimming Spot 1</div>
+    </div>
+
+    <div class="photo-card">
+      <div class="photo-placeholder">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+        <span>Replace with:<br><code>photo2.jpg</code></span>
+      </div>
+      <div class="photo-caption">Swimming Spot 2</div>
+    </div>
+
+    <div class="photo-card">
+      <div class="photo-placeholder">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+        <span>Replace with:<br><code>photo3.jpg</code></span>
+      </div>
+      <div class="photo-caption">Swimming Spot 3</div>
+    </div>
+
+    <div class="photo-card">
+      <div class="photo-placeholder">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+        <span>Replace with:<br><code>photo4.jpg</code></span>
+      </div>
+      <div class="photo-caption">Swimming Spot 4</div>
+    </div>
+
+  </div>
+
+  <div class="edit-hint" style="margin-top:0.75rem">
+    <span>📷</span>
+    <span>
+      <strong>How to add photos:</strong> Rename your photo file simply, e.g. <code>aurinkolahti.jpg</code>.
+      In the photos section above, replace a placeholder <code>&lt;div class="photo-card"&gt;</code> block with
+      <code>&lt;img src="aurinkolahti.jpg" alt="Aurinkolahti"&gt;</code> inside a card div.
+      Upload both this file and the photo to GitHub in the same folder.
+    </span>
+  </div>
+
+</main>
+
+<footer>
+  Live: Water Temperatures and Observations &nbsp;·&nbsp; Updated regularly
+</footer>
+
+<script>
+  function filterTable() {
+    const q = document.getElementById('search').value.toLowerCase();
+    const rows = document.querySelectorAll('#temp-table tbody tr');
+    let visible = 0;
+    rows.forEach(row => {
+      const name = row.querySelector('.location-name')?.textContent.toLowerCase() || '';
+      const note = row.querySelector('.location-note')?.textContent.toLowerCase() || '';
+      if (name.includes(q) || note.includes(q)) {
+        row.classList.remove('hidden'); visible++;
+      } else {
+        row.classList.add('hidden');
+      }
+    });
+    const total = rows.length;
+    document.getElementById('count').textContent = q ? `${visible} of ${total} spots` : `${total} spots`;
+  }
+  filterTable();
+</script>
+
+</body>
+</html>
