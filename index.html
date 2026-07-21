@@ -132,8 +132,32 @@
   footer { text-align: center; padding: 1.5rem; font-size: 0.78rem; color: var(--text-muted); border-top: 1px solid var(--border); }
 
   @media (max-width: 600px) { th:nth-child(3), td:nth-child(3) { display: none; } }
+
+/* Lightbox */
+.lightbox { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:1000; justify-content:center; align-items:center; cursor:pointer; }
+.lightbox.active { display:flex; }
+.lightbox img { max-width:90%; max-height:90vh; border-radius:12px; box-shadow:0 8px 40px rgba(0,0,0,0.5); }
+.lightbox-close { position:absolute; top:20px; right:30px; color:#fff; font-size:2.5rem; cursor:pointer; line-height:1; }
+.photo-card img { cursor:pointer; }
+  
 </style>
 </head>
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <span class="lightbox-close">&times;</span>
+  <img id="lightbox-img" src="" alt="">
+</div>
+
+<script>
+  function openLightbox(src, alt) {
+    document.getElementById('lightbox-img').src = src;
+    document.getElementById('lightbox-img').alt = alt;
+    document.getElementById('lightbox').classList.add('active');
+  }
+  function closeLightbox() {
+    document.getElementById('lightbox').classList.remove('active');
+  }
+</script>
+  
 <body>
 
 <header>
@@ -147,7 +171,7 @@
   <!-- ════════════════════════════════════════════════════════
        STEP 1 TO UPDATE: Change the date and time below
        ════════════════════════════════════════════════════════ -->
-  <div class="updated">Updated: 16 Jul 2026 · 22:00</div>
+  <div class="updated">Updated: 21 Jul 2026 · 14:30</div>
 
   <div class="section-title">🌡️ Latest measured water temperatures</div>
 
@@ -181,6 +205,22 @@
                - notes (or — for nothing)
              ════════════════════════════════════════════════════════ -->
 
+        <tr>
+          <td style="color:var(--text-muted);font-size:0.8rem">18</td>
+          <td><div class="location-name">Otalampi, Vihti</div><div class="location-note">Otalampi</div></td>
+          <td style="font-size:0.82rem;color:var(--text-muted);white-space:nowrap">21 Jul · 09:30</td>
+          <td><span class="temp-badge temp-warm">20.56 °C</span></td>
+          <td style="font-size:0.85rem;color:var(--text-muted)"> Clean and soft water. 13 other people</td>
+        </tr>
+        
+        <tr>
+          <td style="color:var(--text-muted);font-size:0.8rem">18</td>
+          <td><div class="location-name">Kaitalampi, Luukki</div><div class="location-note">Kaitalampi</div></td>
+          <td style="font-size:0.82rem;color:var(--text-muted);white-space:nowrap">20 Jul · 19:56</td>
+          <td><span class="temp-badge temp-warm">21.21 °C</span></td>
+          <td style="font-size:0.85rem;color:var(--text-muted)"> Clear, clean and soft water. 8 other people</td>
+        </tr>
+        
         <tr>
           <td style="color:var(--text-muted);font-size:0.8rem">18</td>
           <td><div class="location-name">Alavojakkala, Tornio</div><div class="location-note">Tampinkoski, Tornionjoki</div></td>
@@ -352,7 +392,7 @@
 <div class="section-title">📸 Photos from the spots</div>
   <div class="photo-grid">
   <div class="photo-card">
-    <img src="Seskar.jpg" alt="Seskarö">
+    <img src="Seskar.jpg" alt="Seskarö"onclick="openLightbox(this.src, this.alt)">
     <div class="photo-caption">Seskarö</div>
   </div> 
   <div class="photo-card">
